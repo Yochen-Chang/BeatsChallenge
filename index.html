@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>動物節奏挑戰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes pulse-custom {
+
+            0%,
+            100% {
+                transform: scale(1);
+                border-color: transparent;
+            }
+
+            50% {
+                transform: scale(1.1);
+                border-color: #ef4444;
+            }
+        }
+
+        .active-beat {
+            animation: pulse-custom 0.1s ease-in-out;
+            border: 6px solid #ef4444 !important;
+            z-index: 10;
+            background-color: #fef2f2;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 1rem;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .prep-glow {
+            text-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+        }
+
+        .upload-dashed {
+            border: 2px dashed #475569;
+            transition: all 0.3s;
+        }
+
+        .upload-dashed:hover {
+            border-color: #eab308;
+            background: #1e293b;
+        }
+
+        .text-auto-size {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: clip;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            line-height: 1;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 10px;
+        }
+
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.9);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        input:disabled,
+        input[type="range"]:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- 載入中遮罩 -->
+    <div id="loading-overlay">
+        <div class="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p class="text-yellow-400 font-bold text-xl">準備遊戲素材中...</p>
+        <p id="loading-progress" class="text-slate-400 text-sm mt-2">0%</p>
+    </div>
+
+    <!-- 設定介面 -->
+    <div id="setup-screen" class="w-full max-w-2xl bg-slate-800 p-8 rounded-2xl shadow-2xl my-8">
+        <h1 class="text-3xl font-bold mb-6 text-center text-yellow-400">動物節奏挑戰</h1>
+
+        <div class="mb-8 p-6 rounded-xl bg-slate-700/30 border border-slate-600">
+            <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4 text-left">音樂設定</h2>
+            <div class="grid grid-cols-1 gap-4">
+                <button id="use-default-music"
+                    class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 mb-2">
+                    <svg id="music-btn-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <span id="music-btn-text">使用預設挑戰音樂 (BPM 183)</span>
+                </button>
+
+                <div class="upload-dashed p-6 rounded-xl text-center bg-slate-800/50">
+                    <input type="file" id="music-upload" accept="audio/mp3,audio/mpeg" class="hidden">
+                    <label for="music-upload" class="cursor-pointer flex flex-col items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-yellow-500 mb-2" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        <span id="music-status"
+                            class="text-base text-slate-300 font-medium truncate w-full px-4 text-center">上傳音樂檔案
+                            (MP3)</span>
+                        <span class="text-xs text-slate-500 mt-1">選用音樂時，系統將自動關閉預設鼓聲</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-group" class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-700/50 rounded-xl">
+            <div class="space-y-2">
+                <label class="block text-sm font-semibold text-slate-300">開頭預備拍數</label>
+                <input type="number" id="start-prep-beats" value="12" min="4" max="32"
+                    class="w-full p-2 rounded bg-slate-800 border border-slate-600 focus:ring-2 focus:ring-yellow-400 outline-none">
+            </div>
+            <div class="space-y-2">
+                <label class="block text-sm font-semibold text-slate-300">組間過渡拍數</label>
+                <input type="number" id="level-gap-beats" value="8" min="0" max="16"
+                    class="w-full p-2 rounded bg-slate-800 border border-slate-600 focus:ring-2 focus:ring-yellow-400 outline-none">
+            </div>
+            <div class="md:col-span-2 space-y-2">
+                <label class="flex justify-between text-sm font-semibold text-slate-300">
+                    <span>遊戲速度 (BPM)</span>
+                    <span id="bpm-display" class="text-yellow-400 font-mono">183 BPM</span>
+                </label>
+                <input type="range" id="bpm-slider" min="60" max="240" value="183"
+                    class="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-yellow-400">
+            </div>
+        </div>
+
+        <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-1 text-left">挑戰內容設定</h2>
+        <div class="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+            <template id="input-row">
+                <div class="flex gap-2 mb-4 items-center">
+                    <input type="text" placeholder="名稱"
+                        class="item-name flex-1 p-3 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                    <div class="relative flex-1 flex items-center gap-1">
+                        <input type="text" placeholder="圖片連結"
+                            class="item-url w-full p-3 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                        <button type="button"
+                            class="upload-item-img-btn p-2 bg-slate-600 hover:bg-slate-500 rounded-lg shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-400" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </button>
+                        <input type="file" class="item-img-file hidden" accept="image/*">
+                    </div>
+                </div>
+            </template>
+            <div id="inputs-container"></div>
+        </div>
+
+        <button id="start-btn"
+            class="w-full mt-8 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-4 rounded-xl transition-all transform hover:scale-105 active:scale-95 text-xl">
+            開始遊戲
+        </button>
+    </div>
+
+    <!-- 遊戲介面 -->
+    <div id="game-screen" class="hidden w-full max-w-5xl flex flex-col items-center">
+        <div class="flex justify-between w-full mb-6 px-4 items-end">
+            <div>
+                <div class="text-sm text-slate-400 uppercase tracking-widest">Level</div>
+                <div class="text-4xl font-black text-yellow-400"><span id="current-level">1</span> <span
+                        class="text-xl text-slate-600">/ 5</span></div>
+            </div>
+            <div id="status-display" class="text-right">
+                <div class="text-sm text-slate-400 uppercase tracking-widest">Status</div>
+                <div id="status-text" class="text-4xl font-black text-red-500 prep-glow">
+                    <span id="status-label">預備：</span><span id="countdown">12</span>
+                </div>
+            </div>
+        </div>
+        <div id="grid-display"
+            class="grid-container aspect-[2/1] bg-slate-800 p-4 rounded-3xl border-8 border-slate-700 shadow-2xl relative">
+        </div>
+        <div class="mt-12 text-center">
+            <p id="instruction" class="text-xl text-yellow-400 font-bold">跟著節奏！</p>
+            <button id="give-up-btn"
+                class="mt-8 text-slate-500 underline hover:text-white transition text-sm">放棄挑戰</button>
+        </div>
+    </div>
+
+    <!-- 結算頁面 -->
+    <div id="result-screen"
+        class="hidden w-full max-w-md bg-slate-800 p-10 rounded-3xl shadow-2xl text-center border-4 border-yellow-500">
+        <div class="text-6xl mb-6">🏆</div>
+        <h2 class="text-3xl font-black text-yellow-400 mb-2">挑戰完成！</h2>
+        <p class="text-slate-400 mb-8">你的節奏感真是太棒了！</p>
+
+        <div class="space-y-4">
+            <button id="retry-btn"
+                class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-4 rounded-xl transition-all transform hover:scale-105 active:scale-95 text-lg">
+                再次挑戰
+            </button>
+            <button id="back-to-setup-btn"
+                class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-xl transition-all">
+                返回設定頁面
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const defaultItems = [
+            { name: "豬", url: "https://images.unsplash.com/photo-1516467508483-a7212febe31a?q=80&w=400&auto=format&fit=crop" },
+            { name: "狗", url: "https://images.unsplash.com/photo-1517849845537-4d257902454a?q=80&w=400&auto=format&fit=crop" },
+            { name: "羊", url: "https://images.unsplash.com/photo-1484557985045-edf25e08da73?q=80&w=400&auto=format&fit=crop" },
+            { name: "牛", url: "https://plus.unsplash.com/premium_photo-1668446124029-9a55e3455b69?q=80&w=400&auto=format&fit=crop" },
+            { name: "貓", url: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=400&auto=format&fit=crop" },
+            { name: "熊", url: "https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?q=80&w=400&auto=format&fit=crop" },
+            { name: "魚", url: "https://images.unsplash.com/photo-1522069169874-c58ec4b76be5?q=80&w=400&auto=format&fit=crop" },
+            { name: "鳥", url: "https://images.unsplash.com/photo-1486365227551-f3f90034a57c?q=80&w=400&auto=format&fit=crop" }
+        ];
+
+        let gameData = [];
+        let currentLevel = 1;
+        let bpm = 183;
+        let startPrepBeats = 12;
+        let levelGapBeats = 8;
+
+        let audioCtx = null;
+        let musicGainNode = null;
+        let bgMusicAudio = null;
+        let bgMusicSource = null;
+
+        let nextBeatTime = 0;
+        let currentBeat = 0;
+        let isPlaying = false;
+        let isChallengeMode = false;
+        let useProceduralDrums = true; // 是否使用電子鼓聲
+
+        const CARDS_PER_LEVEL = 8;
+        const imageCache = new Map();
+
+        // 初始化
+        const inputsContainer = document.getElementById('inputs-container');
+        const rowTemplate = document.getElementById('input-row');
+        for (let i = 0; i < 8; i++) {
+            const clone = rowTemplate.content.cloneNode(true);
+            const rowDiv = clone.querySelector('div');
+            const nameInput = rowDiv.querySelector('.item-name');
+            const urlInput = rowDiv.querySelector('.item-url');
+            const uploadBtn = rowDiv.querySelector('.upload-item-img-btn');
+            const fileInput = rowDiv.querySelector('.item-img-file');
+            if (defaultItems[i]) {
+                nameInput.value = defaultItems[i].name;
+                urlInput.value = defaultItems[i].url;
+            }
+            uploadBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    nameInput.value = file.name.replace(/\.[^/.]+$/, "");
+                    const reader = new FileReader();
+                    reader.onload = (ev) => { urlInput.value = ev.target.result; };
+                    reader.readAsDataURL(file);
+                }
+            });
+            inputsContainer.appendChild(clone);
+        }
+
+        const musicUploadInput = document.getElementById('music-upload');
+        musicUploadInput.addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            const status = document.getElementById('music-status');
+            if (file) {
+                status.innerText = `已選檔案：${file.name}`;
+                status.classList.add('text-yellow-400');
+                if (isChallengeMode) toggleChallengeMode(false);
+            } else {
+                status.innerText = '上傳音樂檔案 (MP3)';
+                status.classList.remove('text-yellow-400');
+            }
+        });
+
+        document.getElementById('use-default-music').onclick = function () {
+            toggleChallengeMode(!isChallengeMode);
+        };
+
+        function toggleChallengeMode(enable) {
+            const btn = document.getElementById('use-default-music');
+            const btnText = document.getElementById('music-btn-text');
+            const btnIcon = document.getElementById('music-btn-icon');
+            const status = document.getElementById('music-status');
+
+            isChallengeMode = enable;
+            if (enable) {
+                musicUploadInput.value = "";
+                status.innerText = '已載入預設挑戰音樂';
+                status.classList.add('text-yellow-400');
+                btnText.innerText = '移除預設挑戰音樂';
+                btn.classList.replace('bg-indigo-600', 'bg-red-600');
+                lockSettings(true);
+            } else {
+                status.innerText = '上傳音樂檔案 (MP3)';
+                status.classList.remove('text-yellow-400');
+                btnText.innerText = '使用預設挑戰音樂 (BPM 183)';
+                btn.classList.replace('bg-red-600', 'bg-indigo-600');
+                lockSettings(false);
+            }
+        }
+
+        function lockSettings(shouldLock) {
+            const bpmSlider = document.getElementById('bpm-slider');
+            const startPrep = document.getElementById('start-prep-beats');
+            const gapBeats = document.getElementById('level-gap-beats');
+            if (shouldLock) {
+                bpmSlider.value = 183; bpmSlider.disabled = true;
+                document.getElementById('bpm-display').innerText = '183 BPM (鎖定)';
+                startPrep.value = 12; startPrep.disabled = true;
+                gapBeats.value = 8; gapBeats.disabled = true;
+            } else {
+                bpmSlider.disabled = false; startPrep.disabled = false; gapBeats.disabled = false;
+                document.getElementById('bpm-display').innerText = `${bpmSlider.value} BPM`;
+            }
+        }
+
+        // 電子大鼓聲
+        function playKickDrum(time) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.setValueAtTime(150, time);
+            osc.frequency.exponentialRampToValueAtTime(40, time + 0.1);
+            gain.gain.setValueAtTime(0.6, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.4);
+            osc.start(time);
+            osc.stop(time + 0.4);
+        }
+
+        // 電子小鼓聲
+        function playSnareDrum(time) {
+            const noise = audioCtx.createBufferSource();
+            const bufferSize = audioCtx.sampleRate * 0.1;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            noise.buffer = buffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.setValueAtTime(1000, time);
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.15, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            noise.start(time);
+        }
+
+        function scheduler() {
+            if (!isPlaying) return;
+            const currentPrep = (currentLevel === 1) ? startPrepBeats : levelGapBeats;
+            const beatsThisLevel = currentPrep + CARDS_PER_LEVEL;
+
+            while (nextBeatTime < audioCtx.currentTime + 0.1) {
+                const isPrepStage = currentBeat < currentPrep;
+
+                // 只有在不使用外部音樂時才播放電子鼓聲
+                if (useProceduralDrums) {
+                    if (isPrepStage) {
+                        playKickDrum(nextBeatTime);
+                        if (currentBeat % 2 === 0) playSnareDrum(nextBeatTime);
+                    } else {
+                        playKickDrum(nextBeatTime);
+                    }
+                }
+
+                if (isPrepStage) {
+                    document.getElementById('countdown').innerText = currentPrep - currentBeat;
+                    document.getElementById('status-label').innerText = "預備：";
+                    document.getElementById('status-text').className = "text-4xl font-black text-red-500 prep-glow";
+                } else {
+                    const imageIdx = currentBeat - currentPrep;
+                    document.getElementById('status-text').className = "text-4xl font-black text-green-400";
+                    document.getElementById('status-label').innerText = "開始！";
+                    document.getElementById('countdown').innerText = "";
+                    updateVisualBeat(imageIdx);
+                }
+
+                nextBeatTime += 60.0 / bpm;
+                currentBeat++;
+                if (currentBeat >= beatsThisLevel) {
+                    currentBeat = 0;
+                    setTimeout(nextLevel, 50);
+                }
+            }
+            requestAnimationFrame(scheduler);
+        }
+
+        function updateVisualBeat(idx) {
+            const cards = document.querySelectorAll('.item-card');
+            cards.forEach(c => c.classList.remove('active-beat'));
+            if (cards[idx]) cards[idx].classList.add('active-beat');
+        }
+
+        function nextLevel() {
+            if (!isPlaying) return;
+            if (currentLevel < 5) {
+                currentLevel++;
+                document.getElementById('current-level').innerText = currentLevel;
+                generateLevel();
+            } else {
+                isPlaying = false;
+                if (musicGainNode) musicGainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 2);
+                document.getElementById('status-label').innerText = "完成！";
+                setTimeout(() => {
+                    if (bgMusicAudio) bgMusicAudio.pause();
+                    document.getElementById('game-screen').classList.add('hidden');
+                    document.getElementById('result-screen').classList.remove('hidden');
+                }, 2000);
+            }
+        }
+
+        function generateLevel() {
+            const grid = document.getElementById('grid-display');
+            grid.innerHTML = '';
+            let numTypes = Math.min(currentLevel + 1, gameData.length, 8);
+            const candidates = [...gameData].sort(() => 0.5 - Math.random()).slice(0, numTypes);
+            for (let i = 0; i < CARDS_PER_LEVEL; i++) {
+                const item = candidates[Math.floor(Math.random() * candidates.length)];
+                const div = document.createElement('div');
+                div.className = "item-card bg-white rounded-xl flex items-center justify-center border-4 border-transparent shadow-md relative overflow-hidden";
+                if (item.url) {
+                    const img = new Image(); img.src = item.url; div.appendChild(img);
+                } else {
+                    const span = document.createElement('span');
+                    span.className = "text-auto-size text-slate-900 font-black px-2";
+                    span.innerText = item.name;
+                    div.appendChild(span);
+                }
+                grid.appendChild(div);
+            }
+        }
+
+        async function startGame() {
+            gameData = [];
+            document.querySelectorAll('.item-name').forEach((n, i) => {
+                const url = document.querySelectorAll('.item-url')[i].value.trim();
+                if (n.value.trim()) gameData.push({ name: n.value.trim(), url });
+            });
+            if (gameData.length < 4) return alert("請至少填寫 4 組內容！");
+
+            document.getElementById('loading-overlay').style.display = 'flex';
+
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+                if (!musicGainNode) {
+                    musicGainNode = audioCtx.createGain();
+                    musicGainNode.connect(audioCtx.destination);
+                }
+
+                let finalMusicURL = null;
+                const uploadedFile = document.getElementById('music-upload').files[0];
+
+                if (uploadedFile) {
+                    finalMusicURL = URL.createObjectURL(uploadedFile);
+                    useProceduralDrums = false; // 有音樂就關閉鼓聲
+                } else if (isChallengeMode) {
+                    finalMusicURL = 'BeatsChallenge_bpm183.mp3';
+                    useProceduralDrums = false; // 有音樂就關閉鼓聲
+                } else {
+                    useProceduralDrums = true; // 沒選音樂才用鼓聲
+                }
+
+                const preloads = [preloadImages(gameData)];
+
+                if (finalMusicURL) {
+                    preloads.push(new Promise((resolve) => {
+                        if (!bgMusicAudio) {
+                            bgMusicAudio = new Audio();
+                            bgMusicAudio.loop = true;
+                            bgMusicSource = audioCtx.createMediaElementSource(bgMusicAudio);
+                            bgMusicSource.connect(musicGainNode);
+                        }
+                        bgMusicAudio.src = finalMusicURL;
+                        bgMusicAudio.oncanplaythrough = () => resolve();
+                        bgMusicAudio.onerror = () => { useProceduralDrums = true; resolve(); };
+                        bgMusicAudio.load();
+                    }));
+                }
+
+                await Promise.all(preloads);
+
+                document.getElementById('loading-overlay').style.display = 'none';
+                document.getElementById('setup-screen').classList.add('hidden');
+                document.getElementById('result-screen').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
+
+                bpm = parseInt(document.getElementById('bpm-slider').value);
+                startPrepBeats = parseInt(document.getElementById('start-prep-beats').value);
+                levelGapBeats = parseInt(document.getElementById('level-gap-beats').value);
+                currentLevel = 1;
+                document.getElementById('current-level').innerText = "1";
+                generateLevel();
+
+                if (bgMusicAudio && finalMusicURL) {
+                    musicGainNode.gain.setValueAtTime(0.8, audioCtx.currentTime);
+                    bgMusicAudio.currentTime = 0;
+                    bgMusicAudio.play();
+                }
+
+                isPlaying = true;
+                currentBeat = 0;
+                nextBeatTime = audioCtx.currentTime + 0.1;
+                scheduler();
+            } catch (err) {
+                document.getElementById('loading-overlay').style.display = 'none';
+                console.error(err);
+                alert("啟動錯誤。");
+            }
+        }
+
+        function preloadImages(data) {
+            const urls = data.filter(d => d.url && !imageCache.has(d.url)).map(d => d.url);
+            if (!urls.length) return Promise.resolve();
+            let loaded = 0;
+            return Promise.all(urls.map(url => new Promise(res => {
+                const img = new Image();
+                img.src = url;
+                img.onload = img.onerror = () => {
+                    loaded++;
+                    document.getElementById('loading-progress').innerText = `${Math.round(loaded / urls.length * 100)}%`;
+                    imageCache.set(url, img);
+                    res();
+                };
+            })));
+        }
+
+        document.getElementById('bpm-slider').oninput = function () {
+            if (!isChallengeMode) document.getElementById('bpm-display').innerText = `${this.value} BPM`;
+        };
+        document.getElementById('start-btn').onclick = startGame;
+        document.getElementById('retry-btn').onclick = startGame;
+        document.getElementById('back-to-setup-btn').onclick = () => {
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('setup-screen').classList.remove('hidden');
+        };
+        document.getElementById('give-up-btn').onclick = () => {
+            isPlaying = false;
+            if (bgMusicAudio) bgMusicAudio.pause();
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('setup-screen').classList.remove('hidden');
+        };
+    </script>
+</body>
+
+</html>
