@@ -438,7 +438,9 @@
                 currentBeat++;
                 if (currentBeat >= beatsThisLevel) {
                     currentBeat = 0;
-                    setTimeout(nextLevel, 50);
+                    const lastCardIdx = CARDS_PER_LEVEL - 1;
+                    updateVisualBeat(lastCardIdx);
+                    setTimeout(nextLevel, 800);
                 }
             }
             requestAnimationFrame(scheduler);
