@@ -301,11 +301,19 @@
         </div>
 
         <div class="mt-4 flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
-            <div class="flex items-center gap-2">
-                <input type="checkbox" id="show-name-checkbox" class="w-5 h-5 rounded border-slate-600 bg-slate-800 text-yellow-400 focus:ring-2 focus:ring-yellow-400 cursor-pointer">
-                <label for="show-name-checkbox" class="text-sm font-semibold text-slate-300 cursor-pointer">
-                    在圖片上顯示名稱
-                </label>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="show-name-checkbox" class="w-5 h-5 rounded border-slate-600 bg-slate-800 text-yellow-400 focus:ring-2 focus:ring-yellow-400 cursor-pointer">
+                    <label for="show-name-checkbox" class="text-sm font-semibold text-slate-300 cursor-pointer">
+                        在圖片上顯示名稱
+                    </label>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="enable-animation-checkbox" checked class="w-5 h-5 rounded border-slate-600 bg-slate-800 text-yellow-400 focus:ring-2 focus:ring-yellow-400 cursor-pointer">
+                    <label for="enable-animation-checkbox" class="text-sm font-semibold text-slate-300 cursor-pointer">
+                        啟用圖片進入動畫
+                    </label>
+                </div>
             </div>
             <button id="preview-btn" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white text-sm font-semibold rounded-lg transition-colors">
                 預覽所有題目
@@ -408,6 +416,7 @@
         let gameStartTime = 0; // 記錄遊戲開始的時間點（用於第一關）
         let levelSwitchTime = 0; // 記錄關卡切換的時間點（用於其他關）
         let showNameOnImage = false; // 是否在圖片上顯示名稱
+        let enableCardAnimation = true; // 是否啟用圖片進入動畫
 
         const CARDS_PER_LEVEL = 8;
         const imageCache = new Map();
@@ -633,7 +642,14 @@
             for (let i = 0; i < CARDS_PER_LEVEL; i++) {
                 const item = candidates[Math.floor(Math.random() * candidates.length)];
                 const div = document.createElement('div');
-                div.className = "item-card bg-white rounded-xl flex items-center justify-center border-4 border-transparent shadow-md relative overflow-hidden card-enter";
+                let cardClasses = "item-card bg-white rounded-xl flex items-center justify-center border-4 border-transparent shadow-md relative overflow-hidden";
+                
+                // 如果啟用動畫，添加動畫類
+                if (enableCardAnimation) {
+                    cardClasses += " card-enter";
+                }
+                
+                div.className = cardClasses;
                 
                 if (item.url) {
                     const img = new Image(); 
@@ -657,11 +673,13 @@
                     div.appendChild(span);
                 }
                 
-                // 設置動畫延遲，讓卡片依序出現
+                // 如果啟用動畫，設置動畫延遲，讓卡片依序出現
                 // 第一關：從第4拍開始，每個卡片間隔1拍
                 // 其他關：立即開始，每個卡片間隔1拍
-                const delay = animationStartDelay + (i * beatDuration);
-                div.style.animationDelay = `${delay}s`;
+                if (enableCardAnimation) {
+                    const delay = animationStartDelay + (i * beatDuration);
+                    div.style.animationDelay = `${delay}s`;
+                }
                 
                 grid.appendChild(div);
             }
@@ -792,6 +810,11 @@
         // 圖片上顯示名稱的開關
         document.getElementById('show-name-checkbox').addEventListener('change', function() {
             showNameOnImage = this.checked;
+        });
+        
+        // 圖片進入動畫的開關
+        document.getElementById('enable-animation-checkbox').addEventListener('change', function() {
+            enableCardAnimation = this.checked;
         });
         
         // 預覽所有題目功能
