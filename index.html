@@ -88,6 +88,22 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
+
+        @keyframes slideUpFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-enter {
+            animation: slideUpFadeIn 0.3s ease-out forwards;
+            opacity: 0;
+        }
     </style>
 </head>
 
@@ -271,6 +287,8 @@
         let isPlaying = false;
         let isChallengeMode = false;
         let useProceduralDrums = true; // 是否使用電子鼓聲
+        let gameStartTime = 0; // 記錄遊戲開始的時間點（用於第一關）
+        let levelSwitchTime = 0; // 記錄關卡切換的時間點（用於其他關）
 
         const CARDS_PER_LEVEL = 8;
         const imageCache = new Map();
@@ -440,7 +458,9 @@
                     currentBeat = 0;
                     const lastCardIdx = CARDS_PER_LEVEL - 1;
                     updateVisualBeat(lastCardIdx);
-                    setTimeout(nextLevel, 800);
+                    // 記錄關卡切換的時間點（在延遲之前）
+                    levelSwitchTime = audioCtx.currentTime;
+                    setTimeout(nextLevel, 500);
                 }
             }
             requestAnimationFrame(scheduler);
@@ -462,6 +482,7 @@
                 isPlaying = false;
                 if (musicGainNode) musicGainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 2);
                 document.getElementById('status-label').innerText = "完成！";
+                document.getElementById('countdown').innerText = ""; // 清空數字顯示
                 setTimeout(() => {
                     if (bgMusicAudio) bgMusicAudio.pause();
                     document.getElementById('game-screen').classList.add('hidden');
@@ -475,18 +496,46 @@
             grid.innerHTML = '';
             let numTypes = Math.min(currentLevel + 1, gameData.length, 8);
             const candidates = [...gameData].sort(() => 0.5 - Math.random()).slice(0, numTypes);
+            
+            // 計算每個卡片之間的延遲時間（基於BPM）
+            const beatDuration = 60.0 / bpm; // 每個節拍的時間（秒）
+            
+            // 第一關：動畫從第4拍開始，到第12拍結束（預備拍結束）
+            // 其他關：動畫立即開始
+            let animationStartDelay = 0;
+            if (currentLevel === 1) {
+                // 第4拍開始 = 第0、1、2、3拍後 = 3個節拍的時間
+                // 基於遊戲開始時間點計算，確保不受關卡切換延遲影響
+                const targetTime = gameStartTime + (3 * beatDuration); // 遊戲開始時間 + 第4拍的時間
+                const currentTime = audioCtx ? audioCtx.currentTime : Date.now() / 1000;
+                animationStartDelay = Math.max(0, targetTime - currentTime);
+            }
+            
             for (let i = 0; i < CARDS_PER_LEVEL; i++) {
                 const item = candidates[Math.floor(Math.random() * candidates.length)];
                 const div = document.createElement('div');
-                div.className = "item-card bg-white rounded-xl flex items-center justify-center border-4 border-transparent shadow-md relative overflow-hidden";
+                div.className = "item-card bg-white rounded-xl flex items-center justify-center border-4 border-transparent shadow-md relative overflow-hidden card-enter";
+                
                 if (item.url) {
-                    const img = new Image(); img.src = item.url; div.appendChild(img);
+                    const img = new Image(); 
+                    img.src = item.url; 
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'cover';
+                    div.appendChild(img);
                 } else {
                     const span = document.createElement('span');
                     span.className = "text-auto-size text-slate-900 font-black text-8xl px-2";
                     span.innerText = item.name;
                     div.appendChild(span);
                 }
+                
+                // 設置動畫延遲，讓卡片依序出現
+                // 第一關：從第4拍開始，每個卡片間隔1拍
+                // 其他關：立即開始，每個卡片間隔1拍
+                const delay = animationStartDelay + (i * beatDuration);
+                div.style.animationDelay = `${delay}s`;
+                
                 grid.appendChild(div);
             }
         }
@@ -552,6 +601,8 @@
                 levelGapBeats = parseInt(document.getElementById('level-gap-beats').value);
                 currentLevel = 1;
                 document.getElementById('current-level').innerText = "1";
+                // 記錄遊戲開始時間（用於第一關動畫計算）
+                gameStartTime = audioCtx.currentTime;
                 generateLevel();
 
                 if (bgMusicAudio && finalMusicURL) {
