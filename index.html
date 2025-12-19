@@ -127,6 +127,74 @@
             z-index: 5;
             pointer-events: none;
         }
+
+        #preview-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        #preview-modal.show {
+            display: flex;
+        }
+
+        .preview-modal-content {
+            background: #1e293b;
+            border-radius: 1rem;
+            padding: 2rem;
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 1rem;
+            aspect-ratio: 2/1;
+        }
+
+        .preview-card {
+            background: #475569;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            min-height: 100px;
+        }
+
+        .preview-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .preview-card-name {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            font-size: 24px;
+            font-weight: bold;
+            color: #000000;
+            text-shadow: 
+                -1px -1px 0 #ffffff,
+                1px -1px 0 #ffffff,
+                -1px 1px 0 #ffffff,
+                1px 1px 0 #ffffff;
+            text-align: center;
+            padding: 4px;
+            background: rgba(255, 255, 255, 0.3);
+        }
     </style>
 </head>
 
@@ -232,11 +300,16 @@
             <div id="inputs-container"></div>
         </div>
 
-        <div class="mt-4 flex items-center gap-2 p-3 bg-slate-700/30 rounded-lg">
-            <input type="checkbox" id="show-name-checkbox" class="w-5 h-5 rounded border-slate-600 bg-slate-800 text-yellow-400 focus:ring-2 focus:ring-yellow-400 cursor-pointer">
-            <label for="show-name-checkbox" class="text-sm font-semibold text-slate-300 cursor-pointer">
-                在圖片上顯示名稱
-            </label>
+        <div class="mt-4 flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+            <div class="flex items-center gap-2">
+                <input type="checkbox" id="show-name-checkbox" class="w-5 h-5 rounded border-slate-600 bg-slate-800 text-yellow-400 focus:ring-2 focus:ring-yellow-400 cursor-pointer">
+                <label for="show-name-checkbox" class="text-sm font-semibold text-slate-300 cursor-pointer">
+                    在圖片上顯示名稱
+                </label>
+            </div>
+            <button id="preview-btn" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white text-sm font-semibold rounded-lg transition-colors">
+                預覽所有題目
+            </button>
         </div>
 
         <button id="start-btn"
@@ -286,6 +359,21 @@
                 class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-xl transition-all">
                 返回設定頁面
             </button>
+        </div>
+    </div>
+
+    <!-- 預覽彈窗 -->
+    <div id="preview-modal">
+        <div class="preview-modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-yellow-400">所有題目預覽</h2>
+                <button id="close-preview-btn" class="text-slate-400 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="preview-grid-container" class="preview-grid"></div>
         </div>
     </div>
 
@@ -681,9 +769,102 @@
             if (!isChallengeMode) document.getElementById('bpm-display').innerText = `${this.value} BPM`;
         };
         
+        // 驗證開頭預備拍數的最小值
+        document.getElementById('start-prep-beats').addEventListener('blur', function() {
+            const value = parseInt(this.value);
+            if (isNaN(value) || value < 4) {
+                this.value = 4;
+            } else if (value > 32) {
+                this.value = 32;
+            }
+        });
+        
+        // 驗證組間過渡拍數的最小值
+        document.getElementById('level-gap-beats').addEventListener('blur', function() {
+            const value = parseInt(this.value);
+            if (isNaN(value) || value < 0) {
+                this.value = 0;
+            } else if (value > 16) {
+                this.value = 16;
+            }
+        });
+        
         // 圖片上顯示名稱的開關
         document.getElementById('show-name-checkbox').addEventListener('change', function() {
             showNameOnImage = this.checked;
+        });
+        
+        // 預覽所有題目功能
+        function showPreview() {
+            const previewGrid = document.getElementById('preview-grid-container');
+            previewGrid.innerHTML = '';
+            
+            // 獲取所有題目資料
+            const items = [];
+            document.querySelectorAll('.item-name').forEach((nameInput, i) => {
+                const urlInput = document.querySelectorAll('.item-url')[i];
+                const name = nameInput.value.trim();
+                const url = urlInput.value.trim();
+                items.push({ name, url });
+            });
+            
+            // 顯示8個方格（4x2）
+            for (let i = 0; i < 8; i++) {
+                const card = document.createElement('div');
+                card.className = 'preview-card';
+                
+                if (items[i] && items[i].name) {
+                    // 有內容的卡片
+                    if (items[i].url && items[i].url.length > 10) {
+                        // 有圖片
+                        const img = document.createElement('img');
+                        img.src = items[i].url;
+                        img.onerror = () => {
+                            // 圖片載入失敗時顯示名稱
+                            card.innerHTML = '';
+                            const nameSpan = document.createElement('span');
+                            nameSpan.className = 'text-slate-900 font-black text-2xl px-2 text-center';
+                            nameSpan.innerText = items[i].name;
+                            card.appendChild(nameSpan);
+                        };
+                        card.appendChild(img);
+                        
+                        // 添加名稱標籤
+                        const nameLabel = document.createElement('div');
+                        nameLabel.className = 'preview-card-name';
+                        nameLabel.innerText = items[i].name;
+                        card.appendChild(nameLabel);
+                    } else {
+                        // 只有名稱，沒有圖片
+                        const nameSpan = document.createElement('span');
+                        nameSpan.className = 'text-slate-900 font-black text-2xl px-2 text-center';
+                        nameSpan.innerText = items[i].name;
+                        card.appendChild(nameSpan);
+                    }
+                } else {
+                    // 沒有內容，顯示灰底
+                    card.style.backgroundColor = '#475569';
+                }
+                
+                previewGrid.appendChild(card);
+            }
+            
+            // 顯示彈窗
+            document.getElementById('preview-modal').classList.add('show');
+        }
+        
+        function closePreview() {
+            document.getElementById('preview-modal').classList.remove('show');
+        }
+        
+        document.getElementById('preview-btn').onclick = showPreview;
+        document.getElementById('close-preview-btn').onclick = closePreview;
+        
+        // 點擊彈窗背景關閉
+        document.getElementById('preview-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closePreview();
+            }
         });
         
         document.getElementById('start-btn').onclick = startGame;
