@@ -104,6 +104,29 @@
             animation: slideUpFadeIn 0.3s ease-out forwards;
             opacity: 0;
         }
+
+        .card-name-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            font-size: 48px;
+            font-weight: bold;
+            color: #000000;
+            text-shadow: 
+                -2px -2px 0 #ffffff,
+                2px -2px 0 #ffffff,
+                -2px 2px 0 #ffffff,
+                2px 2px 0 #ffffff,
+                0 -2px 0 #ffffff,
+                0 2px 0 #ffffff,
+                -2px 0 0 #ffffff,
+                2px 0 0 #ffffff;
+            text-align: center;
+            padding: 8px;
+            z-index: 5;
+            pointer-events: none;
+        }
     </style>
 </head>
 
@@ -209,6 +232,13 @@
             <div id="inputs-container"></div>
         </div>
 
+        <div class="mt-4 flex items-center gap-2 p-3 bg-slate-700/30 rounded-lg">
+            <input type="checkbox" id="show-name-checkbox" class="w-5 h-5 rounded border-slate-600 bg-slate-800 text-yellow-400 focus:ring-2 focus:ring-yellow-400 cursor-pointer">
+            <label for="show-name-checkbox" class="text-sm font-semibold text-slate-300 cursor-pointer">
+                在圖片上顯示名稱
+            </label>
+        </div>
+
         <button id="start-btn"
             class="w-full mt-8 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-4 rounded-xl transition-all transform hover:scale-105 active:scale-95 text-xl">
             開始遊戲
@@ -289,6 +319,7 @@
         let useProceduralDrums = true; // 是否使用電子鼓聲
         let gameStartTime = 0; // 記錄遊戲開始的時間點（用於第一關）
         let levelSwitchTime = 0; // 記錄關卡切換的時間點（用於其他關）
+        let showNameOnImage = false; // 是否在圖片上顯示名稱
 
         const CARDS_PER_LEVEL = 8;
         const imageCache = new Map();
@@ -523,6 +554,14 @@
                     img.style.height = '100%';
                     img.style.objectFit = 'cover';
                     div.appendChild(img);
+                    
+                    // 如果啟用顯示名稱功能，在圖片上添加名稱標籤
+                    if (showNameOnImage && item.name) {
+                        const nameLabel = document.createElement('div');
+                        nameLabel.className = "card-name-label";
+                        nameLabel.innerText = item.name;
+                        div.appendChild(nameLabel);
+                    }
                 } else {
                     const span = document.createElement('span');
                     span.className = "text-auto-size text-slate-900 font-black text-8xl px-2";
@@ -641,6 +680,12 @@
         document.getElementById('bpm-slider').oninput = function () {
             if (!isChallengeMode) document.getElementById('bpm-display').innerText = `${this.value} BPM`;
         };
+        
+        // 圖片上顯示名稱的開關
+        document.getElementById('show-name-checkbox').addEventListener('change', function() {
+            showNameOnImage = this.checked;
+        });
+        
         document.getElementById('start-btn').onclick = startGame;
         document.getElementById('retry-btn').onclick = startGame;
         document.getElementById('back-to-setup-btn').onclick = () => {
