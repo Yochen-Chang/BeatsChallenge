@@ -622,7 +622,26 @@
         function generateLevel() {
             const grid = document.getElementById('grid-display');
             grid.innerHTML = '';
-            let numTypes = Math.min(currentLevel + 1, gameData.length, 8);
+            
+            // 根據關卡設定難度（類型數量）
+            let numTypes;
+            if (currentLevel === 1) {
+                numTypes = 2; // 第一關：固定 2 種
+            } else if (currentLevel === 2) {
+                numTypes = 3; // 第二關：固定 3 種
+            } else if (currentLevel === 3) {
+                numTypes = Math.floor(Math.random() * 2) + 3; // 第三關：隨機 3~4 種
+            } else if (currentLevel === 4) {
+                numTypes = Math.floor(Math.random() * 2) + 4; // 第四關：隨機 4~5 種
+            } else if (currentLevel === 5) {
+                numTypes = Math.floor(Math.random() * 3) + 4; // 第五關：隨機 4~6 種
+            } else {
+                numTypes = Math.min(currentLevel + 1, gameData.length, 8); // 備用邏輯
+            }
+            
+            // 確保不超過可用題目數量
+            numTypes = Math.min(numTypes, gameData.length);
+            
             const candidates = [...gameData].sort(() => 0.5 - Math.random()).slice(0, numTypes);
             
             // 計算每個卡片之間的延遲時間（基於BPM）
