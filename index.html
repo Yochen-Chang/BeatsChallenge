@@ -342,8 +342,14 @@
         </div>
 
         <button id="start-btn"
-            class="w-full mt-8 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-4 rounded-xl transition-all transform hover:scale-105 active:scale-95 text-xl">
-            開始遊戲
+            class="w-full mt-8 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-4 rounded-xl transition-all transform hover:scale-105 active:scale-95 text-xl relative">
+            <span id="start-btn-text">開始遊戲</span>
+            <span id="start-btn-loading" class="hidden absolute inset-0 flex items-center justify-center">
+                <svg class="animate-spin h-5 w-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </span>
         </button>
     </div>
 
@@ -614,11 +620,15 @@
             const selectedFolder = e.target.value;
             if (!selectedFolder) return;
             
-            // 禁用開始遊戲按鈕
+            // 禁用開始遊戲按鈕並顯示Loading動畫
             const startBtn = document.getElementById('start-btn');
+            const startBtnTextEl = document.getElementById('start-btn-text');
+            const startBtnLoadingEl = document.getElementById('start-btn-loading');
             startBtn.disabled = true;
             startBtn.classList.add('opacity-50', 'cursor-not-allowed');
             startBtn.classList.remove('hover:bg-yellow-400', 'hover:scale-105', 'active:scale-95');
+            startBtnTextEl.classList.add('hidden');
+            startBtnLoadingEl.classList.remove('hidden');
             
             const nameInputs = document.querySelectorAll('.item-name');
             const urlInputs = document.querySelectorAll('.item-url');
@@ -697,7 +707,9 @@
             // 等待5秒緩衝時間，讓圖片完全載入
             await new Promise(resolve => setTimeout(resolve, 5000));
             
-            // 重新啟用開始遊戲按鈕
+            // 重新啟用開始遊戲按鈕並隱藏Loading動畫
+            startBtnTextEl.classList.remove('hidden');
+            startBtnLoadingEl.classList.add('hidden');
             startBtn.disabled = false;
             startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             startBtn.classList.add('hover:bg-yellow-400', 'hover:scale-105', 'active:scale-95');
@@ -961,11 +973,15 @@
             });
             if (gameData.length < 4) return alert("請至少填寫 4 組內容！");
 
-            // 禁用開始遊戲按鈕
+            // 禁用開始遊戲按鈕並顯示Loading動畫
             const startBtn = document.getElementById('start-btn');
+            const startBtnText = document.getElementById('start-btn-text');
+            const startBtnLoading = document.getElementById('start-btn-loading');
             startBtn.disabled = true;
             startBtn.classList.add('opacity-50', 'cursor-not-allowed');
             startBtn.classList.remove('hover:bg-yellow-400', 'hover:scale-105', 'active:scale-95');
+            startBtnText.classList.add('hidden');
+            startBtnLoading.classList.remove('hidden');
 
             document.getElementById('loading-overlay').style.display = 'flex';
 
@@ -1058,10 +1074,14 @@
                 console.error(err);
                 alert("啟動錯誤。");
             } finally {
-                // 重新啟用開始遊戲按鈕
+                // 重新啟用開始遊戲按鈕並隱藏Loading動畫
+                const startBtnText = document.getElementById('start-btn-text');
+                const startBtnLoading = document.getElementById('start-btn-loading');
                 startBtn.disabled = false;
                 startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 startBtn.classList.add('hover:bg-yellow-400', 'hover:scale-105', 'active:scale-95');
+                startBtnText.classList.remove('hidden');
+                startBtnLoading.classList.add('hidden');
             }
         }
 
@@ -1150,11 +1170,13 @@
                         };
                         card.appendChild(img);
                         
-                        // 添加名稱標籤
-                        const nameLabel = document.createElement('div');
-                        nameLabel.className = 'preview-card-name';
-                        nameLabel.innerText = items[i].name;
-                        card.appendChild(nameLabel);
+                        // 如果啟用顯示名稱功能，在圖片上添加名稱標籤
+                        if (showNameOnImage && items[i].name) {
+                            const nameLabel = document.createElement('div');
+                            nameLabel.className = 'preview-card-name';
+                            nameLabel.innerText = items[i].name;
+                            card.appendChild(nameLabel);
+                        }
                     } else {
                         // 只有名稱，沒有圖片
                         const nameSpan = document.createElement('span');
