@@ -266,15 +266,27 @@
 
         <div class="flex justify-between items-center mb-2 px-1">
             <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-widest">挑戰內容設定</h2>
-            <button id="clear-all-btn"
-                class="text-xs font-bold text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                清除所有填寫內容
-            </button>
+            <div class="flex items-center gap-2">
+                <button id="import-folder-btn"
+                    class="text-xs font-bold text-green-400 hover:text-green-300 transition-colors flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    </svg>
+                    匯入資料夾內所有圖片
+                </button>
+                <input type="file" id="folder-input" webkitdirectory directory multiple accept="image/*" class="hidden">
+                <button id="clear-all-btn"
+                    class="text-xs font-bold text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    清除所有填寫內容
+                </button>
+            </div>
         </div>
 
         <div class="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
@@ -454,6 +466,60 @@
         }
         initInputs();
 
+        // 匯入資料夾功能
+        document.getElementById('import-folder-btn').onclick = () => {
+            document.getElementById('folder-input').click();
+        };
+        
+        document.getElementById('folder-input').addEventListener('change', function(e) {
+            const files = Array.from(e.target.files).filter(file => file.type.startsWith('image/'));
+            
+            if (files.length === 0) {
+                alert('資料夾中沒有找到圖片檔案！');
+                return;
+            }
+            
+            // 限制最多8個檔案
+            const filesToProcess = files.slice(0, 8);
+            
+            // 獲取所有輸入框
+            const nameInputs = document.querySelectorAll('.item-name');
+            const urlInputs = document.querySelectorAll('.item-url');
+            
+            // 清空現有內容
+            nameInputs.forEach(input => input.value = '');
+            urlInputs.forEach(input => input.value = '');
+            
+            // 處理每個圖片檔案
+            filesToProcess.forEach((file, index) => {
+                if (index >= 8) return; // 最多8個
+                
+                const nameInput = nameInputs[index];
+                const urlInput = urlInputs[index];
+                
+                if (nameInput && urlInput) {
+                    // 設定名稱（移除副檔名）
+                    nameInput.value = file.name.replace(/\.[^/.]+$/, "");
+                    
+                    // 讀取圖片並轉換為 Data URL
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        urlInput.value = ev.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            if (files.length > 8) {
+                alert(`已匯入前 8 個圖片檔案（共 ${files.length} 個檔案）`);
+            } else {
+                alert(`成功匯入 ${files.length} 個圖片檔案！`);
+            }
+            
+            // 重置文件輸入，以便可以再次選擇同一個資料夾
+            e.target.value = '';
+        });
+        
         // 清除所有內容功能
         document.getElementById('clear-all-btn').onclick = () => {
             document.querySelectorAll('.item-name').forEach(input => input.value = '');
