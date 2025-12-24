@@ -905,6 +905,24 @@
             
             const candidates = [...gameData].sort(() => 0.5 - Math.random()).slice(0, numTypes);
             
+            // 構建卡片列表：確保每種類型至少出現一次，剩餘的隨機分配
+            const cardItems = [];
+            
+            // 第一步：確保每種類型至少出現一次
+            for (let i = 0; i < numTypes; i++) {
+                cardItems.push(candidates[i]);
+            }
+            
+            // 第二步：剩餘的卡片從候選類型中隨機選擇
+            const remainingCards = CARDS_PER_LEVEL - numTypes;
+            for (let i = 0; i < remainingCards; i++) {
+                const randomIndex = Math.floor(Math.random() * candidates.length);
+                cardItems.push(candidates[randomIndex]);
+            }
+            
+            // 第三步：打亂順序，讓卡片隨機排列
+            cardItems.sort(() => 0.5 - Math.random());
+            
             // 計算每個卡片之間的延遲時間（基於BPM）
             const beatDuration = 60.0 / bpm; // 每個節拍的時間（秒）
             
@@ -920,7 +938,7 @@
             }
             
             for (let i = 0; i < CARDS_PER_LEVEL; i++) {
-                const item = candidates[Math.floor(Math.random() * candidates.length)];
+                const item = cardItems[i];
                 const div = document.createElement('div');
                 let cardClasses = "item-card bg-white rounded-xl flex items-center justify-center border-4 border-transparent shadow-md relative overflow-hidden";
                 
