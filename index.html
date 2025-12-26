@@ -195,6 +195,36 @@
             padding: 4px;
             background: rgba(255, 255, 255, 0.3);
         }
+
+        /* 折叠区块样式 */
+        .collapse-header {
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+        .collapse-header:hover {
+            opacity: 0.8;
+        }
+
+        .collapse-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .collapse-icon.rotated {
+            transform: rotate(180deg);
+        }
+
+        .collapse-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .collapse-content.expanded {
+            max-height: 5000px;
+            transition: max-height 0.5s ease-in;
+        }
     </style>
 </head>
 
@@ -211,134 +241,160 @@
     <div id="setup-screen" class="w-full max-w-2xl bg-slate-800 p-8 rounded-2xl shadow-2xl my-8">
         <h1 class="text-3xl font-bold mb-6 text-center text-yellow-400">動物節奏挑戰</h1>
 
-        <div class="mb-8 p-6 rounded-xl bg-slate-700/30 border border-slate-600">
-            <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-2 text-left">音樂設定（選填）</h2>
-            <p class="text-[10px] text-slate-500 mb-2 text-left">提示：若不提供音樂，系統將自動產生電子鼓聲。</p>
-            <div class="grid grid-cols-1 gap-4">
-                <button id="use-default-music"
-                    class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 mb-2">
-                    <svg id="music-btn-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
-                        fill="currentColor">
-                        <path fill-rule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                            clip-rule="evenodd" />
-                    </svg>
-                    <span id="music-btn-text">使用預設挑戰音樂 (BPM 183)</span>
-                </button>
-
-                <div class="upload-dashed p-6 rounded-xl text-center bg-slate-800/50">
-                    <input type="file" id="music-upload" accept="audio/mp3,audio/mpeg" class="hidden">
-                    <label for="music-upload" class="cursor-pointer flex flex-col items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-yellow-500 mb-2" fill="none"
-                            viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                        </svg>
-                        <span id="music-status"
-                            class="text-base text-slate-300 font-medium truncate w-full px-4 text-center">上傳音樂檔案
-                            (MP3)</span>
-                        <span class="text-xs text-slate-500 mt-1">選用音樂時，系統將自動關閉預設鼓聲</span>
-                    </label>
+        <!-- 音樂設定區塊 -->
+        <div class="mb-8 rounded-xl bg-slate-700/30 border border-slate-600 overflow-hidden">
+            <div class="collapse-header flex items-center justify-between p-6" onclick="toggleCollapse('music-collapse')">
+                <div class="flex items-center gap-3">
+                    <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-widest">音樂設定（選填）</h2>
+                    <p class="text-[10px] text-slate-500">提示：若不提供音樂，系統將自動產生電子鼓聲。</p>
                 </div>
+                <svg class="collapse-icon w-5 h-5 text-slate-400" id="music-collapse-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
             </div>
-        </div>
-
-        <div id="settings-group" class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-700/50 rounded-xl">
-            <div class="space-y-2">
-                <label class="block text-sm font-semibold text-slate-300">開頭預備拍數</label>
-                <input type="number" id="start-prep-beats" value="12" min="4" max="32"
-                    class="w-full p-2 rounded bg-slate-800 border border-slate-600 focus:ring-2 focus:ring-yellow-400 outline-none">
-            </div>
-            <div class="space-y-2">
-                <label class="block text-sm font-semibold text-slate-300">組間過渡拍數</label>
-                <input type="number" id="level-gap-beats" value="8" min="0" max="16"
-                    class="w-full p-2 rounded bg-slate-800 border border-slate-600 focus:ring-2 focus:ring-yellow-400 outline-none">
-            </div>
-            <div class="md:col-span-2 space-y-2">
-                <label class="flex justify-between text-sm font-semibold text-slate-300">
-                    <span>遊戲速度 (BPM)</span>
-                    <span id="bpm-display" class="text-yellow-400 font-mono">183 BPM</span>
-                </label>
-                <input type="range" id="bpm-slider" min="60" max="240" value="183"
-                    class="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-yellow-400">
-            </div>
-        </div>
-
-        <div class="flex justify-between items-center mb-2 px-1">
-            <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-widest">挑戰內容設定</h2>
-            <div class="flex items-center gap-2">
-                <button id="import-folder-btn"
-                    class="text-xs font-bold text-green-400 hover:text-green-300 transition-colors flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                    </svg>
-                    匯入資料夾內所有圖片
-                </button>
-                <input type="file" id="folder-input" webkitdirectory directory multiple accept="image/*" class="hidden">
-                <button id="clear-all-btn"
-                    class="text-xs font-bold text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    清除所有填寫內容
-                </button>
-            </div>
-        </div>
-
-        <div class="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-            <template id="input-row">
-                <div class="flex gap-2 mb-4 items-center">
-                    <input type="text" placeholder="名稱"
-                        class="item-name flex-1 p-3 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-yellow-400">
-                    <div class="relative flex-1 flex items-center gap-1">
-                        <input type="text" placeholder="圖片連結"
-                            class="item-url w-full p-3 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-yellow-400">
-                        <button type="button"
-                            class="upload-item-img-btn p-2 bg-slate-600 hover:bg-slate-500 rounded-lg shrink-0 h-[50px]">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-400" fill="none"
-                                viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <div class="collapse-content expanded" id="music-collapse">
+                <div class="px-6 pb-6">
+                    <div class="grid grid-cols-1 gap-4">
+                        <button id="use-default-music"
+                            class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 mb-2">
+                            <svg id="music-btn-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
+                                fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                                    clip-rule="evenodd" />
                             </svg>
+                            <span id="music-btn-text">使用預設挑戰音樂 (BPM 183)</span>
                         </button>
-                        <input type="file" class="item-img-file hidden" accept="image/*">
+
+                        <div class="upload-dashed p-6 rounded-xl text-center bg-slate-800/50">
+                            <input type="file" id="music-upload" accept="audio/mp3,audio/mpeg" class="hidden">
+                            <label for="music-upload" class="cursor-pointer flex flex-col items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-yellow-500 mb-2" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                                <span id="music-status"
+                                    class="text-base text-slate-300 font-medium truncate w-full px-4 text-center">上傳音樂檔案
+                                    (MP3)</span>
+                                <span class="text-xs text-slate-500 mt-1">選用音樂時，系統將自動關閉預設鼓聲</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 節拍設定 -->
+                    <div class="mt-6 pt-6 border-t border-slate-600">
+                        <h3 class="text-sm font-semibold text-slate-300 mb-4">節拍設定</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-slate-300">開頭預備拍數</label>
+                                <input type="number" id="start-prep-beats" value="12" min="4" max="32"
+                                    class="w-full p-2 rounded bg-slate-800 border border-slate-600 focus:ring-2 focus:ring-yellow-400 outline-none">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-slate-300">組間過渡拍數</label>
+                                <input type="number" id="level-gap-beats" value="8" min="0" max="16"
+                                    class="w-full p-2 rounded bg-slate-800 border border-slate-600 focus:ring-2 focus:ring-yellow-400 outline-none">
+                            </div>
+                            <div class="md:col-span-2 space-y-2">
+                                <label class="flex justify-between text-sm font-semibold text-slate-300">
+                                    <span>遊戲速度 (BPM)</span>
+                                    <span id="bpm-display" class="text-yellow-400 font-mono">183 BPM</span>
+                                </label>
+                                <input type="range" id="bpm-slider" min="60" max="240" value="183"
+                                    class="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-yellow-400">
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </template>
-            <div id="inputs-container"></div>
-        </div>
-
-        <div class="mt-4 p-3 bg-slate-700/30 rounded-lg">
-            <div class="flex items-center gap-2">
-                <span class="text-xs font-semibold text-slate-300">使用預設題目：</span>
-                <select id="template-select" class="text-xs bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
-                    <option value="">選擇題目...</option>
-                </select>
             </div>
         </div>
 
-        <div class="mt-4 flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
-            <div class="flex items-center gap-4">
-                <div class="flex items-center gap-2">
-                    <input type="checkbox" id="show-name-checkbox" class="w-5 h-5 rounded border-slate-600 bg-slate-800 text-yellow-400 focus:ring-2 focus:ring-yellow-400 cursor-pointer">
-                    <label for="show-name-checkbox" class="text-sm font-semibold text-slate-300 cursor-pointer">
-                        在圖片上顯示名稱
-                    </label>
-                </div>
-                <div class="flex items-center gap-2">
-                    <input type="checkbox" id="enable-animation-checkbox" checked class="w-5 h-5 rounded border-slate-600 bg-slate-800 text-yellow-400 focus:ring-2 focus:ring-yellow-400 cursor-pointer">
-                    <label for="enable-animation-checkbox" class="text-sm font-semibold text-slate-300 cursor-pointer">
-                        啟用圖片進入動畫
-                    </label>
+        <!-- 挑戰內容設定區塊 -->
+        <div class="mb-8 rounded-xl bg-slate-700/30 border border-slate-600 overflow-hidden">
+            <div class="collapse-header flex items-center justify-between p-6" onclick="toggleCollapse('content-collapse')">
+                <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-widest">挑戰內容設定</h2>
+                <svg class="collapse-icon w-5 h-5 text-slate-400" id="content-collapse-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </div>
+            <div class="collapse-content expanded" id="content-collapse">
+                <div class="px-6 pb-6 space-y-4">
+                    <div class="flex items-center justify-end gap-2">
+                        <button id="import-folder-btn"
+                            class="text-xs font-bold text-green-400 hover:text-green-300 transition-colors flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                            </svg>
+                            匯入資料夾內所有圖片
+                        </button>
+                        <input type="file" id="folder-input" webkitdirectory directory multiple accept="image/*" class="hidden">
+                        <button id="clear-all-btn"
+                            class="text-xs font-bold text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            清除所有填寫內容
+                        </button>
+                    </div>
+
+                    <div class="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                        <template id="input-row">
+                            <div class="flex gap-2 mb-4 items-center">
+                                <input type="text" placeholder="名稱"
+                                    class="item-name flex-1 p-3 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                                <div class="relative flex-1 flex items-center gap-1">
+                                    <input type="text" placeholder="圖片連結"
+                                        class="item-url w-full p-3 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                                    <button type="button"
+                                        class="upload-item-img-btn p-2 bg-slate-600 hover:bg-slate-500 rounded-lg shrink-0 h-[50px]">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-400" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                    </button>
+                                    <input type="file" class="item-img-file hidden" accept="image/*">
+                                </div>
+                            </div>
+                        </template>
+                        <div id="inputs-container"></div>
+                    </div>
+
+                    <div class="p-3 bg-slate-700/30 rounded-lg">
+                        <div class="flex items-center justify-between gap-4">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-semibold text-slate-300">使用預設題目：</span>
+                                <select id="template-select" class="text-xs bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
+                                    <option value="">選擇題目...</option>
+                                </select>
+                            </div>
+                            <button id="preview-btn" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white text-sm font-semibold rounded-lg transition-colors">
+                                預覽所有題目
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4 p-3 bg-slate-700/30 rounded-lg">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="show-name-checkbox" class="w-5 h-5 rounded border-slate-600 bg-slate-800 text-yellow-400 focus:ring-2 focus:ring-yellow-400 cursor-pointer">
+                            <label for="show-name-checkbox" class="text-sm font-semibold text-slate-300 cursor-pointer">
+                                在圖片上顯示名稱
+                            </label>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="enable-animation-checkbox" checked class="w-5 h-5 rounded border-slate-600 bg-slate-800 text-yellow-400 focus:ring-2 focus:ring-yellow-400 cursor-pointer">
+                            <label for="enable-animation-checkbox" class="text-sm font-semibold text-slate-300 cursor-pointer">
+                                啟用圖片進入動畫
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <button id="preview-btn" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white text-sm font-semibold rounded-lg transition-colors">
-                預覽所有題目
-            </button>
         </div>
 
         <button id="start-btn"
@@ -1240,6 +1296,20 @@
             document.getElementById('game-screen').classList.add('hidden');
             document.getElementById('setup-screen').classList.remove('hidden');
         };
+        
+        // 折叠/展开功能
+        function toggleCollapse(collapseId) {
+            const content = document.getElementById(collapseId);
+            const icon = document.getElementById(collapseId + '-icon');
+            
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                icon.classList.remove('rotated');
+            } else {
+                content.classList.add('expanded');
+                icon.classList.add('rotated');
+            }
+        }
     </script>
 
     <!-- Footer -->
